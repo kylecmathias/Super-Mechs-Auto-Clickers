@@ -18,7 +18,6 @@ def get_resource_path(relative_path):
         base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
 
-MAX_NUM_RUNS = 34
 APP_NAME = "Super Mechs.exe"
 
 # Define base path for resources using the new helper function
@@ -28,6 +27,8 @@ SCREENS_DIR = os.path.join(RESOURCES_DIR, 'screens')
 
 # Define image paths using the helper function
 CLOSE_IMAGE_PATH = os.path.join(BUTTONS_DIR, "CLOSE.png")
+RIGHT_IMAGE_PATH = os.path.join(BUTTONS_DIR, "RIGHT.png")
+RIGHT_PRESSED_IMAGE_PATH = os.path.join(BUTTONS_DIR, "RIGHT PRESSED.png")
 X_IMAGE_PATH = os.path.join(BUTTONS_DIR, "X.png")
 STORE_IMAGE_PATH = os.path.join(BUTTONS_DIR, "STORE.png")
 MAIN_SCREEN_IMAGE_PATH = os.path.join(SCREENS_DIR, "MainScreen.png")
@@ -147,11 +148,8 @@ def handle_watch_now_sequence():
                 return False
 
 def main():
-    run = 0
     # Main loop adjustments for handling watch sequence
     while True:
-        if run >= MAX_NUM_RUNS:
-            break
         print("Checking if application is already running...")
         if is_app_running(APP_NAME):
             print("Application is already running. Terminating it...")
@@ -207,12 +205,35 @@ def main():
                         kill_app(APP_NAME)
                         break  # Restart the loop if error was detected
 
-                    run += 1
                     break  # Exit the loop once reward is claimed or OK is pressed
                 else:
-                    print("WATCH NOW button not found, exiting...")
-                    kill_app(APP_NAME)
-                    exit()
+                    print("WATCH NOW button not found, checking for right arrow")
+                    while True:
+                        right_coords = find_image(RIGHT_IMAGE_PATH)
+                        right_pressed_coords = find_image(RIGHT_PRESSED_IMAGE_PATH)
+                        if right_coords or right_pressed_coords:
+                            print("RIGHT button found, scrolling right")
+                            pyautogui.click(*right_coords) if right_coords else pyautogui.click(*right_pressed_coords)
+                            time.sleep(2)
+                        else:
+                            print("RIGHT button not found, checking for WATCH NOW")
+                            time.sleep(1)
+                            watch_now_coords = find_image(WATCH_NOW_IMAGE_PATH)
+                            if watch_now_coords:
+                                print("WATCH NOW button detected.")
+                                pyautogui.click(*watch_now_coords)
+                                time.sleep(1)
+
+                                if not handle_watch_now_sequence():
+                                    print("Error occurred. Killing Instance.")
+                                    kill_app(APP_NAME)
+
+                                break  # Exit the loop once reward is claimed or OK is pressed
+                            else:
+                                print("WATCH NOW button not found, exiting...")
+                                kill_app(APP_NAME)
+                                exit()
+                    break
             else:
                 print("Main screen not found. Waiting for 5 seconds...")
                 time.sleep(5)  # Wait before trying again
